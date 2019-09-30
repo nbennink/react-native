@@ -252,7 +252,9 @@ using namespace facebook::react;
 - (void)updateLayoutMetrics:(LayoutMetrics const &)layoutMetrics
            oldLayoutMetrics:(LayoutMetrics const &)oldLayoutMetrics
 {
-  [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+  // Using stored `_layoutMetrics` as `oldLayoutMetrics` here to avoid
+  // re-applying individual sub-values which weren't changed.
+  [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:_layoutMetrics];
 
   _layoutMetrics = layoutMetrics;
   _needsInvalidateLayer = YES;
@@ -459,7 +461,7 @@ static RCTBorderStyle RCTBorderStyleFromBorderStyle(BorderStyle borderStyle)
     CGFloat cornerRadius = 0;
     if (self.clipsToBounds) {
       if (borderMetrics.borderRadii.isUniform()) {
-        // In this case we can simply use `cornerRadius` exclusivly.
+        // In this case we can simply use `cornerRadius` exclusively.
         cornerRadius = borderMetrics.borderRadii.topLeft;
       } else {
         // In this case we have to generate masking layer manually.

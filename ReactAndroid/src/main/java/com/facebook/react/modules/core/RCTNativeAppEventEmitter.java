@@ -6,10 +6,12 @@
  */
 package com.facebook.react.modules.core;
 
+import androidx.annotation.Nullable;
+import com.facebook.proguard.annotations.DoNotStrip;
 import com.facebook.react.bridge.JavaScriptModule;
-import javax.annotation.Nullable;
 
 /** Module that handles global application events. */
+@DoNotStrip
 public interface RCTNativeAppEventEmitter extends JavaScriptModule {
   void emit(String eventName, @Nullable Object data);
 }

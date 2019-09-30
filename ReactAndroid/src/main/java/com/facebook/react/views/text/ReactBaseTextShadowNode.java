@@ -14,6 +14,7 @@ import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.view.Gravity;
+import androidx.annotation.Nullable;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
 import com.facebook.react.bridge.ReadableMap;
@@ -31,12 +32,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * {@link ReactShadowNode} abstract class for spannable text nodes.
  *
- * <p>This class handles all text attributes assosiated with {@code <Text>}-ish node. A concrete
+ * <p>This class handles all text attributes associated with {@code <Text>}-ish node. A concrete
  * node can be an anchor {@code <Text>} node, an anchor {@code <TextInput>} node or virtual {@code
  * <Text>} node inside {@code <Text>} or {@code <TextInput>} node. Or even something else.
  *
@@ -241,7 +241,7 @@ public abstract class ReactBaseTextShadowNode extends LayoutShadowNode {
     // TODO(5837930): Investigate whether it's worth optimizing this part and do it if so
 
     // The {@link SpannableStringBuilder} implementation require setSpan operation to be called
-    // up-to-bottom, otherwise all the spannables that are withing the region for which one may set
+    // up-to-bottom, otherwise all the spannables that are within the region for which one may set
     // a new spannable will be wiped out
     List<SetSpanOperation> ops = new ArrayList<>();
     Map<Integer, ReactShadowNode> inlineViews =
@@ -300,23 +300,6 @@ public abstract class ReactBaseTextShadowNode extends LayoutShadowNode {
     return sb;
   }
 
-  /**
-   * Return -1 if the input string is not a valid numeric fontWeight (100, 200, ..., 900), otherwise
-   * return the weight.
-   *
-   * <p>This code is duplicated in ReactTextInputManager TODO: Factor into a common place they can
-   * both use
-   */
-  private static int parseNumericFontWeight(String fontWeightString) {
-    // This should be much faster than using regex to verify input and Integer.parseInt
-    return fontWeightString.length() == 3
-            && fontWeightString.endsWith("00")
-            && fontWeightString.charAt(0) <= '9'
-            && fontWeightString.charAt(0) >= '1'
-        ? 100 * (fontWeightString.charAt(0) - '0')
-        : UNSET;
-  }
-
   protected TextAttributes mTextAttributes;
 
   protected boolean mIsColorSet = false;
@@ -328,6 +311,8 @@ public abstract class ReactBaseTextShadowNode extends LayoutShadowNode {
   protected int mTextAlign = Gravity.NO_GRAVITY;
   protected int mTextBreakStrategy =
       (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) ? 0 : Layout.BREAK_STRATEGY_HIGH_QUALITY;
+  protected int mHyphenationFrequency =
+      (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) ? 0 : Layout.HYPHENATION_FREQUENCY_NONE;
   protected int mJustificationMode =
       (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) ? 0 : Layout.JUSTIFICATION_MODE_NONE;
   protected TextTransform mTextTransform = TextTransform.UNSET;
@@ -351,18 +336,23 @@ public abstract class ReactBaseTextShadowNode extends LayoutShadowNode {
   /**
    * NB: If a font family is used that does not have a style in a certain Android version (ie.
    * monospace bold pre Android 5.0), that style (ie. bold) will not be inherited by nested Text
-   * nodes. To retain that style, you have to add it to those nodes explicitly. Example, Android
-   * 4.4: <Text style={{fontFamily="serif" fontWeight="bold"}}>Bold Text</Text> <Text
-   * style={{fontFamily="sans-serif"}}>Bold Text</Text> <Text style={{fontFamily="serif}}>Bold
-   * Text</Text>
+   * nodes. To retain that style, you have to add it to those nodes explicitly.
    *
-   * <p><Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text> <Text
-   * style={{fontFamily="sans-serif"}}>Not Bold Text</Text> <Text style={{fontFamily="serif}}>Not
-   * Bold Text</Text>
+   * <p>Example, Android 4.4:
    *
-   * <p><Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text> <Text
-   * style={{fontFamily="sans-serif" fontWeight="bold"}}>Bold Text</Text> <Text
-   * style={{fontFamily="serif}}>Bold Text</Text>
+   * <pre>
+   * <Text style={{fontFamily="serif" fontWeight="bold"}}>Bold Text</Text>
+   *   <Text style={{fontFamily="sans-serif"}}>Bold Text</Text>
+   *     <Text style={{fontFamily="serif}}>Bold Text</Text>
+   *
+   * <Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text>
+   *   <Text style={{fontFamily="sans-serif"}}>Not Bold Text</Text>
+   *     <Text style={{fontFamily="serif}}>Not Bold Text</Text>
+   *
+   * <Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text>
+   *   <Text style={{fontFamily="sans-serif" fontWeight="bold"}}>Bold Text</Text>
+   *     <Text style={{fontFamily="serif}}>Bold Text</Text>
+   * </pre>
    */
   protected @Nullable String mFontFamily = null;
 
@@ -483,37 +473,18 @@ public abstract class ReactBaseTextShadowNode extends LayoutShadowNode {
     markUpdated();
   }
 
-  /**
-   * /* This code is duplicated in ReactTextInputManager /* TODO: Factor into a common place they
-   * can both use
-   */
   @ReactProp(name = ViewProps.FONT_WEIGHT)
   public void setFontWeight(@Nullable String fontWeightString) {
-    int fontWeightNumeric =
-        fontWeightString != null ? parseNumericFontWeight(fontWeightString) : UNSET;
-    int fontWeight = fontWeightNumeric != UNSET ? fontWeightNumeric : Typeface.NORMAL;
-
-    if (fontWeight == 700 || "bold".equals(fontWeightString)) fontWeight = Typeface.BOLD;
-    else if (fontWeight == 400 || "normal".equals(fontWeightString)) fontWeight = Typeface.NORMAL;
-
+    int fontWeight = ReactTypefaceUtils.parseFontWeight(fontWeightString);
     if (fontWeight != mFontWeight) {
       mFontWeight = fontWeight;
       markUpdated();
     }
   }
 
-  /**
-   * /* This code is duplicated in ReactTextInputManager /* TODO: Factor into a common place they
-   * can both use
-   */
   @ReactProp(name = ViewProps.FONT_STYLE)
   public void setFontStyle(@Nullable String fontStyleString) {
-    int fontStyle = UNSET;
-    if ("italic".equals(fontStyleString)) {
-      fontStyle = Typeface.ITALIC;
-    } else if ("normal".equals(fontStyleString)) {
-      fontStyle = Typeface.NORMAL;
-    }
+    int fontStyle = ReactTypefaceUtils.parseFontStyle(fontStyleString);
     if (fontStyle != mFontStyle) {
       mFontStyle = fontStyle;
       markUpdated();

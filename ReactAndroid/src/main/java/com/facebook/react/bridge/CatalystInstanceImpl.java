@@ -11,6 +11,7 @@ import static com.facebook.systrace.Systrace.TRACE_TAG_REACT_JAVA_BRIDGE;
 import android.content.res.AssetManager;
 import android.os.AsyncTask;
 import android.util.Log;
+import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.jni.HybridData;
@@ -23,7 +24,7 @@ import com.facebook.react.bridge.queue.ReactQueueConfigurationSpec;
 import com.facebook.react.common.ReactConstants;
 import com.facebook.react.common.annotations.VisibleForTesting;
 import com.facebook.react.module.annotations.ReactModule;
-import com.facebook.react.turbomodule.core.JSCallInvokerHolderImpl;
+import com.facebook.react.turbomodule.core.CallInvokerHolderImpl;
 import com.facebook.react.turbomodule.core.interfaces.TurboModule;
 import com.facebook.react.turbomodule.core.interfaces.TurboModuleRegistry;
 import com.facebook.systrace.Systrace;
@@ -34,7 +35,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Nullable;
 
 /**
  * This provides an implementation of the public CatalystInstance instance. It is public because it
@@ -100,13 +100,16 @@ public class CatalystInstanceImpl implements CatalystInstance {
 
   private JavaScriptContextHolder mJavaScriptContextHolder;
   private @Nullable TurboModuleRegistry mTurboModuleRegistry = null;
+  private @Nullable JSIModule mTurboModuleManagerJSIModule = null;
 
   // C++ parts
   private final HybridData mHybridData;
 
   private static native HybridData initHybrid();
 
-  public native JSCallInvokerHolderImpl getJSCallInvokerHolder();
+  public native CallInvokerHolderImpl getJSCallInvokerHolder();
+
+  public native CallInvokerHolderImpl getNativeCallInvokerHolder();
 
   private CatalystInstanceImpl(
       final ReactQueueConfigurationSpec reactQueueConfigurationSpec,
@@ -232,13 +235,6 @@ public class CatalystInstanceImpl implements CatalystInstance {
     jniLoadScriptFromFile(fileName, sourceURL, loadSynchronously);
   }
 
-  @Override
-  public void loadScriptFromDeltaBundle(
-      String sourceURL, NativeDeltaClient deltaClient, boolean loadSynchronously) {
-    mSourceURL = sourceURL;
-    jniLoadScriptFromDeltaBundle(sourceURL, deltaClient, loadSynchronously);
-  }
-
   private native void jniSetSourceURL(String sourceURL);
 
   private native void jniRegisterSegment(int segmentId, String path);
@@ -248,9 +244,6 @@ public class CatalystInstanceImpl implements CatalystInstance {
 
   private native void jniLoadScriptFromFile(
       String fileName, String sourceURL, boolean loadSynchronously);
-
-  private native void jniLoadScriptFromDeltaBundle(
-      String sourceURL, NativeDeltaClient deltaClient, boolean loadSynchronously);
 
   @Override
   public void runJSBundle() {
@@ -359,24 +352,51 @@ public class CatalystInstanceImpl implements CatalystInstance {
                 listener.onBridgeDestroyed();
               }
             }
-            AsyncTask.execute(
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    // Kill non-UI threads from neutral third party
-                    // potentially expensive, so don't run on UI thread
 
-                    // contextHolder is used as a lock to guard against other users of the JS VM
-                    // having
-                    // the VM destroyed underneath them, so notify them before we resetNative
-                    mJavaScriptContextHolder.clear();
+            getReactQueueConfiguration()
+                .getJSQueueThread()
+                .runOnQueue(
+                    new Runnable() {
+                      @Override
+                      public void run() {
+                        // We need to destroy the TurboModuleManager on the JS Thread
+                        if (mTurboModuleManagerJSIModule != null) {
+                          mTurboModuleManagerJSIModule.onCatalystInstanceDestroy();
+                        }
 
-                    mHybridData.resetNative();
-                    getReactQueueConfiguration().destroy();
-                    Log.d(ReactConstants.TAG, "CatalystInstanceImpl.destroy() end");
-                    ReactMarker.logMarker(ReactMarkerConstants.DESTROY_CATALYST_INSTANCE_END);
-                  }
-                });
+                        getReactQueueConfiguration()
+                            .getUIQueueThread()
+                            .runOnQueue(
+                                new Runnable() {
+                                  @Override
+                                  public void run() {
+                                    // AsyncTask.execute must be executed from the UI Thread
+                                    AsyncTask.execute(
+                                        new Runnable() {
+                                          @Override
+                                          public void run() {
+                                            // Kill non-UI threads from neutral third party
+                                            // potentially expensive, so don't run on UI thread
+
+                                            // contextHolder is used as a lock to guard against
+                                            // other users of the JS VM having the VM destroyed
+                                            // underneath them, so notify them before we reset
+                                            // Native
+                                            mJavaScriptContextHolder.clear();
+
+                                            mHybridData.resetNative();
+                                            getReactQueueConfiguration().destroy();
+                                            Log.d(
+                                                ReactConstants.TAG,
+                                                "CatalystInstanceImpl.destroy() end");
+                                            ReactMarker.logMarker(
+                                                ReactMarkerConstants.DESTROY_CATALYST_INSTANCE_END);
+                                          }
+                                        });
+                                  }
+                                });
+                      }
+                    });
           }
         });
 
@@ -538,8 +558,9 @@ public class CatalystInstanceImpl implements CatalystInstance {
     }
   }
 
-  public void setTurboModuleManager(JSIModule getter) {
-    mTurboModuleRegistry = (TurboModuleRegistry) getter;
+  public void setTurboModuleManager(JSIModule module) {
+    mTurboModuleRegistry = (TurboModuleRegistry) module;
+    mTurboModuleManagerJSIModule = module;
   }
 
   private void decrementPendingJSCalls() {

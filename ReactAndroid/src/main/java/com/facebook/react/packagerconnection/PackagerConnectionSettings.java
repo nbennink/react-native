@@ -10,10 +10,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
+import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.modules.systeminfo.AndroidInfoHelpers;
-import javax.annotation.Nullable;
 
 public class PackagerConnectionSettings {
   private static final String TAG = PackagerConnectionSettings.class.getSimpleName();
@@ -50,6 +50,10 @@ public class PackagerConnectionSettings {
     }
 
     return host;
+  }
+
+  public void setDebugServerHost(String host) {
+    mPreferences.edit().putString(PREFS_DEBUG_SERVER_HOST_KEY, host).apply();
   }
 
   public String getInspectorServerHost() {

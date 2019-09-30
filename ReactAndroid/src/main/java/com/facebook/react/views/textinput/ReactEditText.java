@@ -30,6 +30,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import androidx.annotation.Nullable;
 import androidx.core.view.AccessibilityDelegateCompat;
 import androidx.core.view.ViewCompat;
 import com.facebook.infer.annotation.Assertions;
@@ -37,11 +38,11 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.views.text.ReactSpan;
 import com.facebook.react.views.text.ReactTextUpdate;
+import com.facebook.react.views.text.ReactTypefaceUtils;
 import com.facebook.react.views.text.TextAttributes;
 import com.facebook.react.views.text.TextInlineImageSpan;
 import com.facebook.react.views.view.ReactViewBackgroundManager;
 import java.util.ArrayList;
-import javax.annotation.Nullable;
 
 /**
  * A wrapper around the EditText that lets us better control what happens when an EditText gets
@@ -83,6 +84,10 @@ public class ReactEditText extends EditText {
   private boolean mDetectScrollMovement = false;
   private boolean mOnKeyPress = false;
   private TextAttributes mTextAttributes;
+  private boolean mTypefaceDirty = false;
+  private @Nullable String mFontFamily = null;
+  private int mFontWeight = ReactTypefaceUtils.UNSET;
+  private int mFontStyle = ReactTypefaceUtils.UNSET;
 
   private ReactViewBackgroundManager mReactBackgroundManager;
 
@@ -382,6 +387,39 @@ public class ReactEditText extends EditText {
     setKeyListener(mKeyListener);
   }
 
+  public void setFontFamily(String fontFamily) {
+    mFontFamily = fontFamily;
+    mTypefaceDirty = true;
+  }
+
+  public void setFontWeight(String fontWeightString) {
+    int fontWeight = ReactTypefaceUtils.parseFontWeight(fontWeightString);
+    if (fontWeight != mFontWeight) {
+      mFontWeight = fontWeight;
+      mTypefaceDirty = true;
+    }
+  }
+
+  public void setFontStyle(String fontStyleString) {
+    int fontStyle = ReactTypefaceUtils.parseFontStyle(fontStyleString);
+    if (fontStyle != mFontStyle) {
+      mFontStyle = fontStyle;
+      mTypefaceDirty = true;
+    }
+  }
+
+  public void maybeUpdateTypeface() {
+    if (!mTypefaceDirty) {
+      return;
+    }
+
+    mTypefaceDirty = false;
+
+    Typeface newTypeface = ReactTypefaceUtils.applyStyles(
+        getTypeface(), mFontStyle, mFontWeight, mFontFamily, getContext().getAssets());
+    setTypeface(newTypeface);
+  }
+
   // VisibleForTesting from {@link TextInputEventsTestCase}.
   public void requestFocusFromJS() {
     mShouldAllowFocus = true;
@@ -484,11 +522,11 @@ public class ReactEditText extends EditText {
     return true;
   }
 
-  private boolean showSoftKeyboard() {
+  protected boolean showSoftKeyboard() {
     return mInputMethodManager.showSoftInput(this, 0);
   }
 
-  private void hideSoftKeyboard() {
+  protected void hideSoftKeyboard() {
     mInputMethodManager.hideSoftInputFromWindow(getWindowToken(), 0);
   }
 
@@ -499,7 +537,7 @@ public class ReactEditText extends EditText {
     return mTextWatcherDelegator;
   }
 
-  private boolean isMultiline() {
+  /* package */ boolean isMultiline() {
     return (getInputType() & InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0;
   }
 

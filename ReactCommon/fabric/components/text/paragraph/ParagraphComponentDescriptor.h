@@ -26,9 +26,13 @@ class ParagraphComponentDescriptor final
     : public ConcreteComponentDescriptor<ParagraphShadowNode> {
  public:
   ParagraphComponentDescriptor(
-      EventDispatcher::Shared eventDispatcher,
-      ContextContainer::Shared const &contextContainer)
-      : ConcreteComponentDescriptor<ParagraphShadowNode>(eventDispatcher) {
+      EventDispatcher::Weak eventDispatcher,
+      ContextContainer::Shared const &contextContainer,
+      ComponentDescriptor::Flavor const &flavor = {})
+      : ConcreteComponentDescriptor<ParagraphShadowNode>(
+            eventDispatcher,
+            contextContainer,
+            flavor) {
     // Every single `ParagraphShadowNode` will have a reference to
     // a shared `TextLayoutManager`.
     textLayoutManager_ = std::make_shared<TextLayoutManager>(contextContainer);
@@ -52,8 +56,7 @@ class ParagraphComponentDescriptor final
 
     // `ParagraphShadowNode` uses this to cache the results of text rendering
     // measurements.
-    paragraphShadowNode->setMeasureCache(
-        measureCache_ ? measureCache_.get() : nullptr);
+    paragraphShadowNode->setMeasureCache(measureCache_.get());
 
     paragraphShadowNode->dirtyLayout();
 
@@ -64,7 +67,7 @@ class ParagraphComponentDescriptor final
 
  private:
   SharedTextLayoutManager textLayoutManager_;
-  std::unique_ptr<const ParagraphMeasurementCache> measureCache_;
+  std::unique_ptr<ParagraphMeasurementCache const> measureCache_;
 };
 
 } // namespace react

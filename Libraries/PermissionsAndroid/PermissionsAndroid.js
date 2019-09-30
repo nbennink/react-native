@@ -10,16 +10,15 @@
 
 'use strict';
 
-import NativeDialogManagerAndroid from '../NativeModules/specs/NativeDialogManagerAndroid';
 const Platform = require('../Utilities/Platform');
+
+import NativeDialogManagerAndroid from '../NativeModules/specs/NativeDialogManagerAndroid';
 import NativePermissionsAndroid from './NativePermissionsAndroid';
-
-import invariant from 'invariant';
-
 import type {
   PermissionStatus,
   PermissionType,
 } from './NativePermissionsAndroid';
+import invariant from 'invariant';
 
 export type Rationale = {
   title: string,
@@ -44,6 +43,7 @@ const PERMISSIONS = Object.freeze({
   GET_ACCOUNTS: 'android.permission.GET_ACCOUNTS',
   ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
   ACCESS_COARSE_LOCATION: 'android.permission.ACCESS_COARSE_LOCATION',
+  ACCESS_BACKGROUND_LOCATION: 'android.permission.ACCESS_BACKGROUND_LOCATION',
   RECORD_AUDIO: 'android.permission.RECORD_AUDIO',
   READ_PHONE_STATE: 'android.permission.READ_PHONE_STATE',
   CALL_PHONE: 'android.permission.CALL_PHONE',
@@ -69,8 +69,38 @@ const PERMISSIONS = Object.freeze({
  */
 
 class PermissionsAndroid {
-  PERMISSIONS = PERMISSIONS;
-  RESULTS = PERMISSION_REQUEST_RESULT;
+  PERMISSIONS: {|
+    ACCESS_BACKGROUND_LOCATION: string,
+    ACCESS_COARSE_LOCATION: string,
+    ACCESS_FINE_LOCATION: string,
+    ADD_VOICEMAIL: string,
+    BODY_SENSORS: string,
+    CALL_PHONE: string,
+    CAMERA: string,
+    GET_ACCOUNTS: string,
+    PROCESS_OUTGOING_CALLS: string,
+    READ_CALENDAR: string,
+    READ_CALL_LOG: string,
+    READ_CONTACTS: string,
+    READ_EXTERNAL_STORAGE: string,
+    READ_PHONE_STATE: string,
+    READ_SMS: string,
+    RECEIVE_MMS: string,
+    RECEIVE_SMS: string,
+    RECEIVE_WAP_PUSH: string,
+    RECORD_AUDIO: string,
+    SEND_SMS: string,
+    USE_SIP: string,
+    WRITE_CALENDAR: string,
+    WRITE_CALL_LOG: string,
+    WRITE_CONTACTS: string,
+    WRITE_EXTERNAL_STORAGE: string,
+  |} = PERMISSIONS;
+  RESULTS: {|
+    DENIED: $TEMPORARY$string<'denied'>,
+    GRANTED: $TEMPORARY$string<'granted'>,
+    NEVER_ASK_AGAIN: $TEMPORARY$string<'never_ask_again'>,
+  |} = PERMISSION_REQUEST_RESULT;
 
   /**
    * DEPRECATED - use check

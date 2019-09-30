@@ -7,7 +7,7 @@
 
 #import "SampleTurboCxxModule.h"
 
-#import <jsireact/TurboModuleUtils.h>
+#import <ReactCommon/TurboModuleUtils.h>
 
 using namespace facebook;
 
@@ -15,7 +15,7 @@ namespace facebook {
 namespace react {
 
 SampleTurboCxxModule::SampleTurboCxxModule(
-    std::shared_ptr<JSCallInvoker> jsInvoker)
+    std::shared_ptr<CallInvoker> jsInvoker)
     : NativeSampleTurboCxxModuleSpecJSI(jsInvoker) {}
 
 void SampleTurboCxxModule::voidFunc(jsi::Runtime &rt) {

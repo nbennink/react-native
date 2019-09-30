@@ -10,6 +10,7 @@
 'use strict';
 
 import codegenNativeComponent from '../../Utilities/codegenNativeComponent';
+import type {HostComponent} from '../../Renderer/shims/ReactNativeTypes';
 import type {ViewProps} from '../View/ViewPropTypes';
 import type {
   BubblingEventHandler,
@@ -37,4 +38,6 @@ type NativeProps = $ReadOnly<{|
   onChange?: ?BubblingEventHandler<OnChangeEvent>,
 |}>;
 
-export default codegenNativeComponent<NativeProps>('RCTSegmentedControl');
+export default (codegenNativeComponent<NativeProps>(
+  'RCTSegmentedControl',
+): HostComponent<NativeProps>);

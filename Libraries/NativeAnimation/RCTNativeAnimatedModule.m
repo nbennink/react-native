@@ -4,9 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-#import "RCTNativeAnimatedModule.h"
+#import <React/RCTNativeAnimatedModule.h>
 
-#import "RCTNativeAnimatedNodesManager.h"
+#import <React/RCTNativeAnimatedNodesManager.h>
 
 typedef void (^AnimatedOperation)(RCTNativeAnimatedNodesManager *nodesManager);
 
@@ -14,7 +14,7 @@ typedef void (^AnimatedOperation)(RCTNativeAnimatedNodesManager *nodesManager);
 {
   RCTNativeAnimatedNodesManager *_nodesManager;
 
-  // Oparations called after views have been updated.
+  // Operations called after views have been updated.
   NSMutableArray<AnimatedOperation> *_operations;
   // Operations called before views have been updated.
   NSMutableArray<AnimatedOperation> *_preOperations;
@@ -87,13 +87,16 @@ RCT_EXPORT_METHOD(startAnimatingNode:(nonnull NSNumber *)animationId
   [self addOperationBlock:^(RCTNativeAnimatedNodesManager *nodesManager) {
     [nodesManager startAnimatingNode:animationId nodeTag:nodeTag config:config endCallback:callBack];
   }];
-  __weak RCTNativeAnimatedModule *weakSelf = self;
+
   RCTExecuteOnMainQueue(^{
-      __strong RCTNativeAnimatedModule *strongSelf = weakSelf;
-      if (strongSelf && [strongSelf->_nodesManager isNodeManagedByFabric:nodeTag]) {
-          strongSelf->_animIdIsManagedByFabric[animationId] = @YES;
-          [strongSelf flushOperationQueues];
-      }
+    if (![self->_nodesManager isNodeManagedByFabric:nodeTag]) {
+      return;
+    }
+
+    RCTExecuteOnUIManagerQueue(^{
+      self->_animIdIsManagedByFabric[animationId] = @YES;
+      [self flushOperationQueues];
+    });
   });
 }
 

@@ -11,8 +11,8 @@
 
 'use strict';
 
-import type {NativeComponent} from '../../Libraries/Renderer/shims/ReactNative';
 import requireNativeComponent from '../../Libraries/ReactNative/requireNativeComponent';
+import type {HostComponent} from '../../Libraries/Renderer/shims/ReactNativeTypes';
 import {UIManager} from 'react-native';
 
 // TODO: import from CodegenSchema once workspaces are enabled
@@ -22,10 +22,12 @@ type Options = $ReadOnly<{|
   paperComponentNameDeprecated?: string,
 |}>;
 
+export type NativeComponentType<T> = HostComponent<T>;
+
 function codegenNativeComponent<Props>(
   componentName: string,
   options?: Options,
-): Class<NativeComponent<Props>> {
+): NativeComponentType<Props> {
   let componentNameInUse =
     options && options.paperComponentName
       ? options.paperComponentName
@@ -41,7 +43,8 @@ function codegenNativeComponent<Props>(
       componentNameInUse = options.paperComponentNameDeprecated;
     } else {
       throw new Error(
-        'Failed to find native component for either "::_COMPONENT_NAME_::" or "::_COMPONENT_NAME_DEPRECATED_::"',
+        `Failed to find native component for either ${componentName} or ${options.paperComponentNameDeprecated ||
+          '(unknown)'}`,
       );
     }
   }
@@ -50,9 +53,9 @@ function codegenNativeComponent<Props>(
   // generated with the view config babel plugin, so we need to require the native component.
   //
   // This will be useful during migration, but eventually this will error.
-  return ((requireNativeComponent(componentNameInUse): any): Class<
-    NativeComponent<Props>,
-  >);
+  return (requireNativeComponent<Props>(
+    componentNameInUse,
+  ): HostComponent<Props>);
 }
 
 export default codegenNativeComponent;

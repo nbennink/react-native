@@ -7,12 +7,14 @@
 package com.facebook.react.bridge;
 
 import android.os.Bundle;
+import android.os.Parcelable;
+
+import androidx.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 public class Arguments {
   private static Object makeNativeObject(Object object) {
@@ -217,6 +219,14 @@ public class Arguments {
     } else if (array instanceof boolean[]) {
       for (boolean v : (boolean[]) array) {
         catalystArray.pushBoolean(v);
+      }
+    } else if (array instanceof Parcelable[]) {
+      for (Parcelable v : (Parcelable[]) array) {
+        if (v instanceof Bundle) {
+          catalystArray.pushMap(fromBundle((Bundle) v));
+        } else {
+          throw new IllegalArgumentException("Unexpected array member type " + v.getClass());
+        }
       }
     } else {
       throw new IllegalArgumentException("Unknown array type " + array.getClass());

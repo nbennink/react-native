@@ -8,6 +8,7 @@ package com.facebook.react.devsupport;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
+import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Inspector;
 import java.io.IOException;
@@ -15,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -138,7 +138,9 @@ public class InspectorPackagerConnection {
     String wrappedEvent = payload.getString("wrappedEvent");
     Inspector.LocalConnection inspectorConnection = mInspectorConnections.get(pageId);
     if (inspectorConnection == null) {
-      throw new IllegalStateException("Not connected: " + pageId);
+      // This tends to happen during reloads, so don't panic.
+      FLog.w(TAG, "PageID " + pageId + " is disconnected. Dropping event: " + wrappedEvent);
+      return;
     }
     inspectorConnection.sendMessage(wrappedEvent);
   }

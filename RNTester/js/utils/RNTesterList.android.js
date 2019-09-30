@@ -34,6 +34,10 @@ const ComponentExamples: Array<RNTesterExample> = [
     module: require('../examples/Image/ImageExample'),
   },
   {
+    key: 'JSResponderHandlerExample',
+    module: require('../examples/JSResponderHandlerExample/JSResponderHandlerExample'),
+  },
+  {
     key: 'KeyboardAvoidingViewExample',
     module: require('../examples/KeyboardAvoidingView/KeyboardAvoidingViewExample'),
   },
@@ -125,6 +129,14 @@ const APIExamples: Array<RNTesterExample> = [
     module: require('../examples/Animated/AnimatedExample'),
   },
   {
+    key: 'Animation - GratuitousAnimation',
+    module: require('../examples/Animated/AnimatedGratuitousApp/AnExApp'),
+  },
+  {
+    key: 'AppearanceExample',
+    module: require('../examples/Appearance/AppearanceExample'),
+  },
+  {
     key: 'AppStateExample',
     module: require('../examples/AppState/AppStateExample'),
   },
@@ -143,6 +155,10 @@ const APIExamples: Array<RNTesterExample> = [
   {
     key: 'DatePickerAndroidExample',
     module: require('../examples/DatePicker/DatePickerAndroidExample'),
+  },
+  {
+    key: 'DevSettings',
+    module: require('../examples/DevSettings/DevSettingsExample'),
   },
   {
     key: 'Dimensions',
@@ -193,10 +209,6 @@ const APIExamples: Array<RNTesterExample> = [
     module: require('../examples/Share/ShareExample'),
   },
   {
-    key: 'TimePickerAndroidExample',
-    module: require('../examples/TimePicker/TimePickerAndroidExample'),
-  },
-  {
     key: 'TimerExample',
     module: require('../examples/Timer/TimerExample'),
   },
@@ -222,7 +234,7 @@ const APIExamples: Array<RNTesterExample> = [
   },
 ];
 
-const Modules = {};
+const Modules: any = {};
 
 APIExamples.concat(ComponentExamples).forEach(Example => {
   Modules[Example.key] = Example.module;

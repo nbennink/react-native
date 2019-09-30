@@ -10,15 +10,15 @@
 'use strict';
 
 module.exports = {
-  getViewManagerConfig: (viewManagerName: string) => {
+  getViewManagerConfig: (viewManagerName: string): null => {
     console.warn(
       'Attempting to get config for view manager: ' + viewManagerName,
     );
     return null;
   },
-  getConstants: () => ({}),
+  getConstants: (): {...} => ({}),
   getConstantsForViewManager: (viewManagerName: string) => {},
-  getDefaultEventTypes: () => [],
+  getDefaultEventTypes: (): Array<$FlowFixMe> => [],
   playTouchSound: () => {},
   lazilyLoadView: (name: string) => {},
   createView: (
@@ -60,6 +60,11 @@ module.exports = {
   measureInWindow: (
     reactTag: ?number,
     callback: (x: number, y: number, width: number, height: number) => void,
+  ) => {},
+  viewIsDescendantOf: (
+    reactTag: ?number,
+    ancestorReactTag: ?number,
+    callback: (result: Array<boolean>) => void,
   ) => {},
   measureLayout: (
     reactTag: ?number,

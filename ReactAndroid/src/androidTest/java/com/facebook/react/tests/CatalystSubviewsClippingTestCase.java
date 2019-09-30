@@ -8,6 +8,7 @@ package com.facebook.react.tests;
 
 import android.content.Context;
 import android.widget.ScrollView;
+import androidx.annotation.Nullable;
 import com.facebook.react.bridge.JavaScriptModule;
 import com.facebook.react.testing.ReactAppInstrumentationTestCase;
 import com.facebook.react.testing.ReactInstanceSpecForTest;
@@ -18,7 +19,6 @@ import com.facebook.react.views.view.ReactViewGroup;
 import com.facebook.react.views.view.ReactViewManager;
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nullable;
 import org.junit.Assert;
 
 /**
@@ -52,12 +52,27 @@ public class CatalystSubviewsClippingTestCase extends ReactAppInstrumentationTes
   }
 
   /**
-   * In this test view are layout in a following way: +-----------------------------+ | | |
-   * +---------------------+ | | | inner1 | | | +---------------------+ | |
-   * +-------------------------+ | | | outer (clip=true) | | | | +---------------------+ | | | | |
-   * inner2 | | | | | +---------------------+ | | | | | | | +-------------------------+ | |
-   * +---------------------+ | | | inner3 | | | +---------------------+ | | |
+   * In this test view are layout in a following way:
+   *
+   * <pre>
    * +-----------------------------+
+   * |                             |
+   * |   +---------------------+   |
+   * |   | inner1              |   |
+   * |   +---------------------+   |
+   * | +-------------------------+ |
+   * | | outer (clip=true)       | |
+   * | | +---------------------+ | |
+   * | | | inner2              | | |
+   * | | +---------------------+ | |
+   * | |                         | |
+   * | +-------------------------+ |
+   * |   +---------------------+   |
+   * |   | inner3              |   |
+   * |   +---------------------+   |
+   * |                             |
+   * +-----------------------------+
+   * </pre>
    *
    * <p>We expect only outer and inner2 to be attached
    */
@@ -69,11 +84,29 @@ public class CatalystSubviewsClippingTestCase extends ReactAppInstrumentationTes
   }
 
   /**
-   * In this test view are layout in a following way: +-----------------------------+ | outer
-   * (clip=true) | | | | | | | | +-----------------------------+ | | complexInner (clip=true) | | |
-   * +----------+ | +---------+ | | | | inner1 | | | inner2 | | | | | | | | | | | | +----------+ |
-   * +---------+ | +--------------+--------------+ | | +----------+ +---------+ | | | inner3 | |
-   * inner4 | | | | | | | | | +----------+ +---------+ | | | +-----------------------------+
+   * In this test view are layout in a following way:
+   *
+   * <pre>
+   * In this test view are layout in a following way:
+   * +-----------------------------+
+   * | outer (clip=true)           |
+   * |                             |
+   * |                             |
+   * |                             |
+   * |              +-----------------------------+
+   * |              | complexInner (clip=true)    |
+   * |              | +----------+ | +---------+  |
+   * |              | | inner1   | | | inner2  |  |
+   * |              | |          | | |         |  |
+   * |              | +----------+ | +---------+  |
+   * +--------------+--------------+              |
+   *                | +----------+   +---------+  |
+   *                | | inner3   |   | inner4  |  |
+   *                | |          |   |         |  |
+   *                | +----------+   +---------+  |
+   *                |                             |
+   *                +-----------------------------+
+   * </pre>
    *
    * <p>We expect outer, complexInner & inner1 to be attached
    */

@@ -17,12 +17,12 @@ export interface Spec extends TurboModule {
   +reload: () => void;
   +setHotLoadingEnabled: (isHotLoadingEnabled: boolean) => void;
   +setIsDebuggingRemotely: (isDebuggingRemotelyEnabled: boolean) => void;
-  +setLiveReloadEnabled: (isLiveReloadEnabled: boolean) => void;
   +setProfilingEnabled: (isProfilingEnabled: boolean) => void;
   +toggleElementInspector: () => void;
+  +addMenuItem: (title: string) => void;
 
   // iOS only.
   +setIsShakeToShowDevMenuEnabled: (enabled: boolean) => void;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>('DevSettings');
+export default (TurboModuleRegistry.getEnforcing<Spec>('DevSettings'): Spec);

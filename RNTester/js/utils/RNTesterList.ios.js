@@ -19,11 +19,6 @@ const ComponentExamples: Array<RNTesterExample> = [
     supportsTVOS: true,
   },
   {
-    key: 'ARTExample',
-    module: require('../examples/ART/ARTExample'),
-    supportsTVOS: true,
-  },
-  {
     key: 'ButtonExample',
     module: require('../examples/Button/ButtonExample'),
     supportsTVOS: true,
@@ -42,6 +37,10 @@ const ComponentExamples: Array<RNTesterExample> = [
     key: 'ImageExample',
     module: require('../examples/Image/ImageExample'),
     supportsTVOS: true,
+  },
+  {
+    key: 'JSResponderHandlerExample',
+    module: require('../examples/JSResponderHandlerExample/JSResponderHandlerExample'),
   },
   {
     key: 'InputAccessoryViewExample',
@@ -202,6 +201,11 @@ const APIExamples: Array<RNTesterExample> = [
     supportsTVOS: true,
   },
   {
+    key: 'AppearanceExample',
+    module: require('../examples/Appearance/AppearanceExample'),
+    supportsTVOS: false,
+  },
+  {
     key: 'AppStateExample',
     module: require('../examples/AppState/AppStateExample'),
     supportsTVOS: true,
@@ -230,6 +234,10 @@ const APIExamples: Array<RNTesterExample> = [
     key: 'CrashExample',
     module: require('../examples/Crash/CrashExample'),
     supportsTVOS: false,
+  },
+  {
+    key: 'DevSettings',
+    module: require('../examples/DevSettings/DevSettingsExample'),
   },
   {
     key: 'Dimensions',
@@ -333,7 +341,7 @@ const APIExamples: Array<RNTesterExample> = [
   },
 ];
 
-const Modules = {};
+const Modules: {...} = {};
 
 APIExamples.concat(ComponentExamples).forEach(Example => {
   Modules[Example.key] = Example.module;

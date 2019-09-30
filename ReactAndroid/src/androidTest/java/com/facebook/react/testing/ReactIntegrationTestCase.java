@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import android.test.AndroidTestCase;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.annotation.Nullable;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.BaseJavaModule;
 import com.facebook.react.bridge.CatalystInstance;
@@ -22,14 +23,13 @@ import com.facebook.react.bridge.UiThreadUtil;
 import com.facebook.react.common.futures.SimpleSettableFuture;
 import com.facebook.react.devsupport.interfaces.DevSupportManager;
 import com.facebook.react.modules.core.ReactChoreographer;
-import com.facebook.react.modules.core.Timing;
+import com.facebook.react.modules.core.TimingModule;
 import com.facebook.react.testing.idledetection.ReactBridgeIdleSignaler;
 import com.facebook.react.testing.idledetection.ReactIdleDetectionUtil;
 import com.facebook.soloader.SoLoader;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 /**
  * Use this class for writing integration tests of catalyst. This class will run all JNI call within
@@ -38,10 +38,14 @@ import javax.annotation.Nullable;
  * <p>Keep in mind that all JS remote method calls and script load calls are asynchronous and you
  * should not expect them to return results immediately.
  *
- * <p>In order to write catalyst integration: 1) Make {@link ReactIntegrationTestCase} a base class
- * of your test case 2) Use {@link ReactTestHelper#catalystInstanceBuilder()} instead of {@link
- * com.facebook.react.bridge.CatalystInstanceImpl.Builder} to build catalyst instance for testing
- * purposes
+ * <p>In order to write catalyst integration:
+ *
+ * <ol>
+ *   <li>Make {@link ReactIntegrationTestCase} a base class of your test case
+ *   <li>Use {@link ReactTestHelper#catalystInstanceBuilder()} instead of {@link
+ *       com.facebook.react.bridge.CatalystInstanceImpl.Builder} to build catalyst instance for
+ *       testing purposes
+ * </ol>
  */
 public abstract class ReactIntegrationTestCase extends AndroidTestCase {
 
@@ -127,15 +131,17 @@ public abstract class ReactIntegrationTestCase extends AndroidTestCase {
   /**
    * Timing module needs to be created on the main thread so that it gets the correct Choreographer.
    */
-  protected Timing createTimingModule() {
-    final SimpleSettableFuture<Timing> simpleSettableFuture = new SimpleSettableFuture<Timing>();
+  protected TimingModule createTimingModule() {
+    final SimpleSettableFuture<TimingModule> simpleSettableFuture =
+        new SimpleSettableFuture<TimingModule>();
     UiThreadUtil.runOnUiThread(
         new Runnable() {
           @Override
           public void run() {
             ReactChoreographer.initialize();
-            Timing timing = new Timing(getContext(), mock(DevSupportManager.class));
-            simpleSettableFuture.set(timing);
+            TimingModule timingModule =
+                new TimingModule(getContext(), mock(DevSupportManager.class));
+            simpleSettableFuture.set(timingModule);
           }
         });
     try {

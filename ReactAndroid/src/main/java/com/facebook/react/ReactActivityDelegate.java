@@ -12,10 +12,10 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
+import androidx.annotation.Nullable;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.modules.core.PermissionListener;
-import javax.annotation.Nullable;
 
 /**
  * Delegate class for {@link ReactActivity} and {@link ReactFragmentActivity}. You can subclass this
@@ -47,7 +47,7 @@ public class ReactActivityDelegate {
   }
 
   protected ReactRootView createRootView() {
-    return mReactDelegate.createRootView();
+    return new ReactRootView(getContext());
   }
 
   /**
@@ -73,7 +73,12 @@ public class ReactActivityDelegate {
     String mainComponentName = getMainComponentName();
     mReactDelegate =
         new ReactDelegate(
-            getPlainActivity(), getReactNativeHost(), mainComponentName, getLaunchOptions());
+            getPlainActivity(), getReactNativeHost(), mainComponentName, getLaunchOptions()) {
+          @Override
+          protected ReactRootView createRootView() {
+            return ReactActivityDelegate.this.createRootView();
+          }
+        };
     if (mMainComponentName != null) {
       loadApp(mainComponentName);
     }

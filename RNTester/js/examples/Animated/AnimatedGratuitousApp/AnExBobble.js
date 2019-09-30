@@ -42,12 +42,18 @@ class AnExBobble extends React.Component<Object, any> {
         if (this.state.selectedBobble !== null) {
           const restSpot = BOBBLE_SPOTS[this.state.selectedBobble];
           Animated.spring(this.state.bobbles[this.state.selectedBobble], {
-            toValue: restSpot, // return previously selected bobble to rest position
+            // return previously selected bobble to rest position
+            toValue: restSpot,
+
+            useNativeDriver: false,
           }).start();
         }
         if (newSelected !== null && newSelected !== 0) {
           Animated.spring(this.state.bobbles[newSelected], {
-            toValue: this.state.bobbles[0], // newly selected should track the selector
+            // newly selected should track the selector
+            toValue: this.state.bobbles[0],
+
+            useNativeDriver: false,
           }).start();
         }
         this.state.selectedBobble = newSelected;
@@ -56,7 +62,10 @@ class AnExBobble extends React.Component<Object, any> {
     const releaseBobble = () => {
       this.state.bobbles.forEach((bobble, i) => {
         Animated.spring(bobble, {
-          toValue: {x: 0, y: 0}, // all bobbles return to zero
+          // all bobbles return to zero
+          toValue: {x: 0, y: 0},
+
+          useNativeDriver: false,
         }).start();
       });
     };
@@ -65,14 +74,19 @@ class AnExBobble extends React.Component<Object, any> {
       onPanResponderGrant: () => {
         BOBBLE_SPOTS.forEach((spot, idx) => {
           Animated.spring(this.state.bobbles[idx], {
-            toValue: spot, // spring each bobble to its spot
-            friction: 3, // less friction => bouncier
+            // spring each bobble to its spot
+            toValue: spot,
+
+            // less friction => bouncier
+            friction: 3,
+
+            useNativeDriver: false,
           }).start();
         });
       },
       onPanResponderMove: Animated.event(
         [null, {dx: this.state.bobbles[0].x, dy: this.state.bobbles[0].y}],
-        {listener: bobblePanListener}, // async state changes with arbitrary logic
+        {listener: bobblePanListener, useNativeDriver: false}, // async state changes with arbitrary logic
       ),
       onPanResponderRelease: releaseBobble,
       onPanResponderTerminate: releaseBobble,

@@ -10,13 +10,13 @@ import android.graphics.Typeface;
 import android.os.Build;
 import android.text.Layout;
 import android.view.Gravity;
+import androidx.annotation.Nullable;
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.uimanager.PixelUtil;
 import com.facebook.react.uimanager.ReactStylesDiffMap;
 import com.facebook.react.uimanager.ViewProps;
 import com.facebook.yoga.YogaDirection;
-import javax.annotation.Nullable;
 
 public class TextAttributeProps {
 
@@ -72,18 +72,23 @@ public class TextAttributeProps {
   /**
    * NB: If a font family is used that does not have a style in a certain Android version (ie.
    * monospace bold pre Android 5.0), that style (ie. bold) will not be inherited by nested Text
-   * nodes. To retain that style, you have to add it to those nodes explicitly. Example, Android
-   * 4.4: <Text style={{fontFamily="serif" fontWeight="bold"}}>Bold Text</Text> <Text
-   * style={{fontFamily="sans-serif"}}>Bold Text</Text> <Text style={{fontFamily="serif}}>Bold
-   * Text</Text>
+   * nodes. To retain that style, you have to add it to those nodes explicitly.
    *
-   * <p><Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text> <Text
-   * style={{fontFamily="sans-serif"}}>Not Bold Text</Text> <Text style={{fontFamily="serif}}>Not
-   * Bold Text</Text>
+   * <p>Example, Android 4.4:
    *
-   * <p><Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text> <Text
-   * style={{fontFamily="sans-serif" fontWeight="bold"}}>Bold Text</Text> <Text
-   * style={{fontFamily="serif}}>Bold Text</Text>
+   * <pre>
+   * <Text style={{fontFamily="serif" fontWeight="bold"}}>Bold Text</Text>
+   *   <Text style={{fontFamily="sans-serif"}}>Bold Text</Text>
+   *     <Text style={{fontFamily="serif}}>Bold Text</Text>
+   *
+   * <Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text>
+   *   <Text style={{fontFamily="sans-serif"}}>Not Bold Text</Text>
+   *     <Text style={{fontFamily="serif}}>Not Bold Text</Text>
+   *
+   * <Text style={{fontFamily="monospace" fontWeight="bold"}}>Not Bold Text</Text>
+   *   <Text style={{fontFamily="sans-serif" fontWeight="bold"}}>Bold Text</Text>
+   *     <Text style={{fontFamily="serif}}>Bold Text</Text>
+   * </pre>
    */
   protected @Nullable String mFontFamily = null;
 

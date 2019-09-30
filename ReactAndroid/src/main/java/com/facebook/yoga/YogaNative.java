@@ -28,8 +28,8 @@ public class YogaNative {
 
 
   // YGNode related
-  static native long jni_YGNodeNew(boolean useBatchingForLayoutOutputs);
-  static native long jni_YGNodeNewWithConfig(long configPointer, boolean useBatchingForLayoutOutputs);
+  static native long jni_YGNodeNew();
+  static native long jni_YGNodeNewWithConfig(long configPointer);
   static native void jni_YGNodeFree(long nativePointer);
   static native void jni_YGNodeReset(long nativePointer);
   static native void jni_YGNodeInsertChild(long nativePointer, long childPointer, int index);
@@ -111,4 +111,8 @@ public class YogaNative {
   static native void jni_YGNodePrint(long nativePointer);
   static native void jni_YGNodeSetStyleInputs(long nativePointer, float[] styleInputsArray, int size);
   static native long jni_YGNodeClone(long nativePointer);
+
+
+  // JNI methods that use Vanilla JNI
+  public static native void jni_YGNodeStyleSetFlexJNI(long nativePointer, float flex);
 }

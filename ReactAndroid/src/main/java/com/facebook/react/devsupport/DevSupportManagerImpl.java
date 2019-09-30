@@ -18,6 +18,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.hardware.SensorManager;
 import android.util.Pair;
+import android.widget.EditText;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
@@ -28,7 +29,7 @@ import com.facebook.react.R;
 import com.facebook.react.bridge.CatalystInstance;
 import com.facebook.react.bridge.DefaultNativeModuleCallExceptionHandler;
 import com.facebook.react.bridge.JavaJSExecutor;
-import com.facebook.react.bridge.NativeDeltaClient;
+import com.facebook.react.bridge.JavaScriptExecutorFactory;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactMarker;
 import com.facebook.react.bridge.ReactMarkerConstants;
@@ -94,6 +95,7 @@ public class DevSupportManagerImpl
   private static final int JSEXCEPTION_ERROR_COOKIE = -1;
   private static final String JS_BUNDLE_FILE_NAME = "ReactNativeDevBundle.js";
   private static final String RELOAD_APP_ACTION_SUFFIX = ".RELOAD_APP_ACTION";
+  private boolean mIsSamplingProfilerEnabled = false;
 
   private enum ErrorType {
     JS,
@@ -231,6 +233,19 @@ public class DevSupportManagerImpl
         new DevLoadingViewController(applicationContext, reactInstanceManagerHelper);
 
     mExceptionLoggers.add(new JSExceptionLogger());
+
+    if (mDevSettings.isStartSamplingProfilerOnInit()) {
+      // Only start the profiler. If its already running, there is an error
+      if (!mIsSamplingProfilerEnabled) {
+        toggleJSSamplingProfiler();
+      } else {
+        Toast.makeText(
+                mApplicationContext,
+                "JS Sampling Profiler was already running, so did not start the sampling profiler",
+                Toast.LENGTH_LONG)
+            .show();
+      }
+    }
   }
 
   @Override
@@ -458,6 +473,41 @@ public class DevSupportManagerImpl
           });
     }
     options.put(
+        mApplicationContext.getString(R.string.catalyst_change_bundle_location),
+        new DevOptionHandler() {
+          @Override
+          public void onOptionSelected() {
+            Activity context = mReactInstanceManagerHelper.getCurrentActivity();
+            if (context == null || context.isFinishing()) {
+              FLog.e(
+                  ReactConstants.TAG,
+                  "Unable to launch change bundle location because react activity is not available");
+              return;
+            }
+
+            final EditText input = new EditText(context);
+            input.setHint("localhost:8081");
+
+            AlertDialog bundleLocationDialog =
+                new AlertDialog.Builder(context)
+                    .setTitle(
+                        mApplicationContext.getString(R.string.catalyst_change_bundle_location))
+                    .setView(input)
+                    .setPositiveButton(
+                        android.R.string.ok,
+                        new DialogInterface.OnClickListener() {
+                          @Override
+                          public void onClick(DialogInterface dialog, int which) {
+                            String host = input.getText().toString();
+                            mDevSettings.getPackagerConnectionSettings().setDebugServerHost(host);
+                            handleReloadJS();
+                          }
+                        })
+                    .create();
+            bundleLocationDialog.show();
+          }
+        });
+    options.put(
         // NOTE: `isElementInspectorEnabled` is not guaranteed to be accurate.
         mApplicationContext.getString(R.string.catalyst_inspector),
         new DevOptionHandler() {
@@ -467,18 +517,6 @@ public class DevSupportManagerImpl
             mReactInstanceManagerHelper.toggleElementInspector();
           }
         });
-
-    // "Live reload" which refreshes on every edit was removed in favor of "Fast Refresh".
-    // While native code for "Live reload" is still there, please don't add the option back.
-    //
-    // If for some reason you really need a full reload on every edit,
-    // you can put this into your application entry point as an escape hatch:
-    //
-    // if (__DEV__) {
-    //   require.Refresh.forceFullRefresh = true;
-    // }
-    //
-    // See D15958697 for more context.
 
     options.put(
         mDevSettings.isHotModuleReplacementEnabled()
@@ -507,6 +545,18 @@ public class DevSupportManagerImpl
             }
           }
         });
+
+    options.put(
+        mIsSamplingProfilerEnabled
+            ? mApplicationContext.getString(R.string.catalyst_sample_profiler_disable)
+            : mApplicationContext.getString(R.string.catalyst_sample_profiler_enable),
+        new DevOptionHandler() {
+          @Override
+          public void onOptionSelected() {
+            toggleJSSamplingProfiler();
+          }
+        });
+
     options.put(
         mDevSettings.isFpsDebugEnabled()
             ? mApplicationContext.getString(R.string.catalyst_perf_monitor_stop)
@@ -570,6 +620,52 @@ public class DevSupportManagerImpl
                 })
             .create();
     mDevOptionsDialog.show();
+  }
+
+  /** Starts of stops the sampling profiler */
+  private void toggleJSSamplingProfiler() {
+    JavaScriptExecutorFactory javaScriptExecutorFactory =
+        mReactInstanceManagerHelper.getJavaScriptExecutorFactory();
+    if (!mIsSamplingProfilerEnabled) {
+      try {
+        javaScriptExecutorFactory.startSamplingProfiler();
+        Toast.makeText(mApplicationContext, "Starting Sampling Profiler", Toast.LENGTH_SHORT)
+            .show();
+      } catch (UnsupportedOperationException e) {
+        Toast.makeText(
+                mApplicationContext,
+                javaScriptExecutorFactory.toString() + " does not support Sampling Profiler",
+                Toast.LENGTH_LONG)
+            .show();
+      } finally {
+        mIsSamplingProfilerEnabled = true;
+      }
+    } else {
+      try {
+        final String outputPath =
+            File.createTempFile(
+                    "sampling-profiler-trace", ".cpuprofile", mApplicationContext.getCacheDir())
+                .getPath();
+        javaScriptExecutorFactory.stopSamplingProfiler(outputPath);
+        Toast.makeText(
+                mApplicationContext,
+                "Saved results from Profiler to " + outputPath,
+                Toast.LENGTH_LONG)
+            .show();
+      } catch (IOException e) {
+        FLog.e(
+            ReactConstants.TAG,
+            "Could not create temporary file for saving results from Sampling Profiler");
+      } catch (UnsupportedOperationException e) {
+        Toast.makeText(
+                mApplicationContext,
+                javaScriptExecutorFactory.toString() + "does not support Sampling Profiler",
+                Toast.LENGTH_LONG)
+            .show();
+      } finally {
+        mIsSamplingProfilerEnabled = false;
+      }
+    }
   }
 
   /**
@@ -927,7 +1023,7 @@ public class DevSupportManagerImpl
     mDevServerHelper.downloadBundleFromURL(
         new DevBundleDownloadListener() {
           @Override
-          public void onSuccess(final @Nullable NativeDeltaClient nativeDeltaClient) {
+          public void onSuccess() {
             mDevLoadingViewController.hide();
             mDevLoadingViewVisible = false;
             synchronized (DevSupportManagerImpl.this) {
@@ -935,7 +1031,7 @@ public class DevSupportManagerImpl
               mBundleStatus.updateTimestamp = System.currentTimeMillis();
             }
             if (mBundleDownloadListener != null) {
-              mBundleDownloadListener.onSuccess(nativeDeltaClient);
+              mBundleDownloadListener.onSuccess();
             }
             UiThreadUtil.runOnUiThread(
                 new Runnable() {
@@ -943,7 +1039,7 @@ public class DevSupportManagerImpl
                   public void run() {
                     ReactMarker.logMarker(
                         ReactMarkerConstants.DOWNLOAD_END, bundleInfo.toJSONString());
-                    mReactInstanceManagerHelper.onJSBundleLoadedFromServer(nativeDeltaClient);
+                    mReactInstanceManagerHelper.onJSBundleLoadedFromServer();
                   }
                 });
           }
@@ -1035,22 +1131,6 @@ public class DevSupportManagerImpl
   }
 
   @Override
-  public void setReloadOnJSChangeEnabled(final boolean isReloadOnJSChangeEnabled) {
-    if (!mIsDevSupportEnabled) {
-      return;
-    }
-
-    UiThreadUtil.runOnUiThread(
-        new Runnable() {
-          @Override
-          public void run() {
-            mDevSettings.setReloadOnJSChangeEnabled(isReloadOnJSChangeEnabled);
-            handleReloadJS();
-          }
-        });
-  }
-
-  @Override
   public void setFpsDebugEnabled(final boolean isFpsDebugEnabled) {
     if (!mIsDevSupportEnabled) {
       return;
@@ -1112,17 +1192,6 @@ public class DevSupportManagerImpl
       }
 
       mDevServerHelper.openPackagerConnection(this.getClass().getSimpleName(), this);
-      if (mDevSettings.isReloadOnJSChangeEnabled()) {
-        mDevServerHelper.startPollingOnChangeEndpoint(
-            new DevServerHelper.OnServerContentChangeListener() {
-              @Override
-              public void onServerContentChanged() {
-                handleReloadJS();
-              }
-            });
-      } else {
-        mDevServerHelper.stopPollingOnChangeEndpoint();
-      }
     } else {
       // hide FPS debug overlay
       if (mDebugOverlayController != null) {
@@ -1150,7 +1219,6 @@ public class DevSupportManagerImpl
       // hide loading view
       mDevLoadingViewController.hide();
       mDevServerHelper.closePackagerConnection();
-      mDevServerHelper.stopPollingOnChangeEndpoint();
     }
   }
 

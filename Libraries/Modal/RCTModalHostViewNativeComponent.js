@@ -11,9 +11,9 @@
 'use strict';
 
 import codegenNativeComponent from '../Utilities/codegenNativeComponent';
+import type {HostComponent} from '../Renderer/shims/ReactNativeTypes';
 import type {
   WithDefault,
-  BubblingEventHandler,
   DirectEventHandler,
   Int32,
 } from '../Types/CodegenTypes';
@@ -61,13 +61,6 @@ type NativeProps = $ReadOnly<{|
   hardwareAccelerated?: WithDefault<boolean, false>,
 
   /**
-   * The `visible` prop determines whether your modal is visible.
-   *
-   * See https://facebook.github.io/react-native/docs/modal.html#visible
-   */
-  visible?: WithDefault<boolean, false>,
-
-  /**
    * The `onRequestClose` callback is called when the user taps the hardware
    * back button on Android or the menu button on Apple TV.
    *
@@ -84,14 +77,6 @@ type NativeProps = $ReadOnly<{|
    * See https://facebook.github.io/react-native/docs/modal.html#onshow
    */
   onShow?: ?DirectEventHandler<null>,
-
-  /**
-   * The `onDismiss` prop allows passing a function that will be called once
-   * the modal has been dismissed.
-   *
-   * See https://facebook.github.io/react-native/docs/modal.html#ondismiss
-   */
-  onDismiss?: ?BubblingEventHandler<null>,
 
   /**
    * Deprecated. Use the `animationType` prop instead.
@@ -127,7 +112,7 @@ type NativeProps = $ReadOnly<{|
   identifier?: WithDefault<Int32, 0>,
 |}>;
 
-export default codegenNativeComponent<NativeProps>('ModalHostView', {
+export default (codegenNativeComponent<NativeProps>('ModalHostView', {
   interfaceOnly: true,
   paperComponentName: 'RCTModalHostView',
-});
+}): HostComponent<NativeProps>);

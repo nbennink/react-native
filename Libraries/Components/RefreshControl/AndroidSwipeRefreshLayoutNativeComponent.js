@@ -11,6 +11,7 @@
 'use strict';
 
 import codegenNativeComponent from '../../Utilities/codegenNativeComponent';
+import type {HostComponent} from '../../Renderer/shims/ReactNativeTypes';
 
 import type {
   DirectEventHandler,
@@ -27,7 +28,7 @@ type NativeProps = $ReadOnly<{|
   /**
    * Whether the pull to refresh functionality is enabled.
    */
-  enabled?: WithDefault<boolean, false>,
+  enabled?: WithDefault<boolean, true>,
   /**
    * The colors (at least one) that will be used to draw the refresh indicator.
    */
@@ -64,4 +65,6 @@ type NativeProps = $ReadOnly<{|
   refreshing: boolean,
 |}>;
 
-export default codegenNativeComponent<NativeProps>('AndroidSwipeRefreshLayout');
+export default (codegenNativeComponent<NativeProps>(
+  'AndroidSwipeRefreshLayout',
+): HostComponent<NativeProps>);

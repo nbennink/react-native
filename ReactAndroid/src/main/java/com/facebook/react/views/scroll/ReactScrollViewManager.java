@@ -8,6 +8,7 @@ package com.facebook.react.views.scroll;
 
 import android.graphics.Color;
 import android.util.DisplayMetrics;
+import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.common.MapBuilder;
@@ -25,7 +26,6 @@ import com.facebook.yoga.YogaConstants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * View manager for {@link ReactScrollView} components.
@@ -276,6 +276,17 @@ public class ReactScrollViewManager extends ViewGroupManager<ReactScrollView>
   @ReactProp(name = "persistentScrollbar")
   public void setPersistentScrollbar(ReactScrollView view, boolean value) {
     view.setScrollbarFadingEnabled(!value);
+  }
+
+  @ReactProp(name = "fadingEdgeLength")
+  public void setFadingEdgeLength(ReactScrollView view, int value) {
+    if (value > 0) {
+      view.setVerticalFadingEdgeEnabled(true);
+      view.setFadingEdgeLength(value);
+    } else {
+      view.setVerticalFadingEdgeEnabled(false);
+      view.setFadingEdgeLength(0);
+    }
   }
 
   @Override

@@ -16,6 +16,7 @@ import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.view.Gravity;
 import android.widget.TextView;
+import androidx.annotation.Nullable;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableArray;
@@ -33,7 +34,6 @@ import com.facebook.yoga.YogaMeasureMode;
 import com.facebook.yoga.YogaMeasureOutput;
 import com.facebook.yoga.YogaNode;
 import java.util.ArrayList;
-import javax.annotation.Nullable;
 
 /**
  * {@link ReactBaseTextShadowNode} concrete class for anchor {@code Text} node.
@@ -108,7 +108,7 @@ public class ReactTextShadowNode extends ReactBaseTextShadowNode {
                       .setLineSpacing(0.f, 1.f)
                       .setIncludePad(mIncludeFontPadding)
                       .setBreakStrategy(mTextBreakStrategy)
-                      .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL);
+                      .setHyphenationFrequency(mHyphenationFrequency);
 
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setJustificationMode(mJustificationMode);
@@ -146,7 +146,7 @@ public class ReactTextShadowNode extends ReactBaseTextShadowNode {
                       .setLineSpacing(0.f, 1.f)
                       .setIncludePad(mIncludeFontPadding)
                       .setBreakStrategy(mTextBreakStrategy)
-                      .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL);
+                      .setHyphenationFrequency(mHyphenationFrequency);
 
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 builder.setUseLineSpacingFromFallbacks(true);

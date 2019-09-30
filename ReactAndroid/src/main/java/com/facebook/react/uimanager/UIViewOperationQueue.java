@@ -8,6 +8,8 @@ package com.facebook.react.uimanager;
 
 import android.os.SystemClock;
 import android.view.View;
+import androidx.annotation.GuardedBy;
+import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.GuardedRunnable;
@@ -26,8 +28,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 
 /**
  * This class acts as a buffer for command executed on {@link NativeViewHierarchyManager}. It expose
@@ -261,6 +261,7 @@ public class UIViewOperationQueue {
     }
   }
 
+  @Deprecated
   private final class DispatchCommandOperation extends ViewOperation {
 
     private final int mCommand;
@@ -534,12 +535,16 @@ public class UIViewOperationQueue {
   private boolean mIsProfilingNextBatch = false;
   private long mNonBatchedExecutionTotalTime;
   private long mProfiledBatchCommitStartTime;
+  private long mProfiledBatchCommitEndTime;
   private long mProfiledBatchLayoutTime;
   private long mProfiledBatchDispatchViewUpdatesTime;
   private long mProfiledBatchRunStartTime;
+  private long mProfiledBatchRunEndTime;
   private long mProfiledBatchBatchedExecutionTime;
   private long mProfiledBatchNonBatchedExecutionTime;
   private long mThreadCpuTime;
+  private long mCreateViewCount;
+  private long mUpdatePropertiesOperationCount;
 
   public UIViewOperationQueue(
       ReactApplicationContext reactContext,
@@ -567,17 +572,23 @@ public class UIViewOperationQueue {
   public void profileNextBatch() {
     mIsProfilingNextBatch = true;
     mProfiledBatchCommitStartTime = 0;
+    mCreateViewCount = 0;
+    mUpdatePropertiesOperationCount = 0;
   }
 
   public Map<String, Long> getProfiledBatchPerfCounters() {
     Map<String, Long> perfMap = new HashMap<>();
     perfMap.put("CommitStartTime", mProfiledBatchCommitStartTime);
+    perfMap.put("CommitEndTime", mProfiledBatchCommitEndTime);
     perfMap.put("LayoutTime", mProfiledBatchLayoutTime);
     perfMap.put("DispatchViewUpdatesTime", mProfiledBatchDispatchViewUpdatesTime);
     perfMap.put("RunStartTime", mProfiledBatchRunStartTime);
+    perfMap.put("RunEndTime", mProfiledBatchRunEndTime);
     perfMap.put("BatchedExecutionTime", mProfiledBatchBatchedExecutionTime);
     perfMap.put("NonBatchedExecutionTime", mProfiledBatchNonBatchedExecutionTime);
     perfMap.put("NativeModulesThreadCpuTime", mThreadCpuTime);
+    perfMap.put("CreateViewCount", mCreateViewCount);
+    perfMap.put("UpdatePropsCount", mUpdatePropertiesOperationCount);
     return perfMap;
   }
 
@@ -613,6 +624,7 @@ public class UIViewOperationQueue {
     mOperations.add(new ChangeJSResponderOperation(0, 0, true /*clearResponder*/, false));
   }
 
+  @Deprecated
   public void enqueueDispatchCommand(
       int reactTag, int commandId, @Nullable ReadableArray commandArgs) {
     mOperations.add(new DispatchCommandOperation(reactTag, commandId, commandArgs));
@@ -642,6 +654,7 @@ public class UIViewOperationQueue {
       String viewClassName,
       @Nullable ReactStylesDiffMap initialProps) {
     synchronized (mNonBatchedOperationsLock) {
+      mCreateViewCount++;
       mNonBatchedOperations.addLast(
           new CreateViewOperation(themedContext, viewReactTag, viewClassName, initialProps));
     }
@@ -652,6 +665,7 @@ public class UIViewOperationQueue {
   }
 
   public void enqueueUpdateProperties(int reactTag, String className, ReactStylesDiffMap props) {
+    mUpdatePropertiesOperationCount++;
     mOperations.add(new UpdatePropertiesOperation(reactTag, props));
   }
 
@@ -780,9 +794,11 @@ public class UIViewOperationQueue {
 
                 if (mIsProfilingNextBatch && mProfiledBatchCommitStartTime == 0) {
                   mProfiledBatchCommitStartTime = commitStartTime;
+                  mProfiledBatchCommitEndTime = SystemClock.uptimeMillis();
                   mProfiledBatchLayoutTime = layoutTime;
                   mProfiledBatchDispatchViewUpdatesTime = dispatchViewUpdatesTime;
                   mProfiledBatchRunStartTime = runStartTime;
+                  mProfiledBatchRunEndTime = mProfiledBatchCommitEndTime;
                   mThreadCpuTime = nativeModulesThreadCpuTime;
 
                   Systrace.beginAsyncSection(

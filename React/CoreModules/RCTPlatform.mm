@@ -13,6 +13,8 @@
 #import <React/RCTUtils.h>
 #import <React/RCTVersion.h>
 
+#import "CoreModulesPlugins.h"
+
 using namespace facebook::react;
 
 static NSString *interfaceIdiom(UIUserInterfaceIdiom idiom) {
@@ -42,29 +44,43 @@ RCT_EXPORT_MODULE(PlatformConstants)
   return YES;
 }
 
-// TODO: Use the generated struct return type.
-- (NSDictionary<NSString *, id> *)constantsToExport
+- (dispatch_queue_t)methodQueue
 {
-  return [self getConstants];
+  return dispatch_get_main_queue();
 }
 
 // TODO: Use the generated struct return type.
-- (NSDictionary<NSString *, id> *)getConstants
+- (ModuleConstants<JS::NativePlatformConstantsIOS::Constants>)constantsToExport
+{
+  return (ModuleConstants<JS::NativePlatformConstantsIOS::Constants>)[self getConstants];
+}
+
+- (ModuleConstants<JS::NativePlatformConstantsIOS::Constants>)getConstants
 {
   UIDevice *device = [UIDevice currentDevice];
-  return @{
-    @"forceTouchAvailable": @(RCTForceTouchAvailable()),
-    @"osVersion": [device systemVersion],
-    @"systemName": [device systemName],
-    @"interfaceIdiom": interfaceIdiom([device userInterfaceIdiom]),
-    @"isTesting": @(RCTRunningInTestEnvironment()),
-    @"reactNativeVersion": RCTGetReactNativeVersion(),
-  };
+  auto versions = RCTGetReactNativeVersion();
+  return typedConstants<JS::NativePlatformConstantsIOS::Constants>({
+    .forceTouchAvailable = RCTForceTouchAvailable() ? true : false,
+    .osVersion = [device systemVersion],
+    .systemName = [device systemName],
+    .interfaceIdiom = interfaceIdiom([device userInterfaceIdiom]),
+    .isTesting = RCTRunningInTestEnvironment() ? true : false,
+    .reactNativeVersion = JS::NativePlatformConstantsIOS::ConstantsReactNativeVersion::Builder({
+      .minor = [versions[@"minor"] doubleValue],
+      .major = [versions[@"major"] doubleValue],
+      .patch = [versions[@"patch"] doubleValue],
+      .prerelease = [versions[@"prerelease"] isKindOfClass: [NSNull class]] ? folly::Optional<double>{} : [versions[@"prerelease"] doubleValue]
+    }),
+  });
 }
 
-- (std::shared_ptr<TurboModule>)getTurboModuleWithJsInvoker:(std::shared_ptr<JSCallInvoker>)jsInvoker
+- (std::shared_ptr<TurboModule>)getTurboModuleWithJsInvoker:(std::shared_ptr<CallInvoker>)jsInvoker
 {
   return std::make_shared<NativePlatformConstantsIOSSpecJSI>(self, jsInvoker);
 }
 
 @end
+
+Class RCTPlatformCls(void) {
+  return RCTPlatform.class;
+}

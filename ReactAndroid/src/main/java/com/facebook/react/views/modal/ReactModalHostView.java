@@ -19,31 +19,40 @@ import android.view.ViewStructure;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.FrameLayout;
+import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.R;
 import com.facebook.react.bridge.GuardedRunnable;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.common.annotations.VisibleForTesting;
 import com.facebook.react.uimanager.JSTouchDispatcher;
+import com.facebook.react.uimanager.PixelUtil;
 import com.facebook.react.uimanager.RootView;
+import com.facebook.react.uimanager.StateWrapper;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.uimanager.events.EventDispatcher;
 import com.facebook.react.views.common.ContextUtils;
 import com.facebook.react.views.view.ReactViewGroup;
 import java.util.ArrayList;
-import javax.annotation.Nullable;
 
 /**
  * ReactModalHostView is a view that sits in the view hierarchy representing a Modal view.
  *
- * <p>It does a number of things: 1. It creates a Dialog. We use this Dialog to actually display the
- * Modal in the window. 2. It creates a DialogRootViewGroup. This view is the view that is displayed
- * by the Dialog. To display a view within a Dialog, that view must have its parent set to the
- * window the Dialog creates. Because of this, we can not use the ReactModalHostView since it sits
- * in the normal React view hierarchy. We do however want all of the layout magic to happen as if
- * the DialogRootViewGroup were part of the hierarchy. Therefore, we forward all view changes around
- * addition and removal of views to the DialogRootViewGroup.
+ * <p>It does a number of things:
+ *
+ * <ol>
+ *   <li>It creates a Dialog. We use this Dialog to actually display the Modal in the window.
+ *   <li>It creates a DialogRootViewGroup. This view is the view that is displayed by the Dialog. To
+ *       display a view within a Dialog, that view must have its parent set to the window the Dialog
+ *       creates. Because of this, we can not use the ReactModalHostView since it sits in the normal
+ *       React view hierarchy. We do however want all of the layout magic to happen as if the
+ *       DialogRootViewGroup were part of the hierarchy. Therefore, we forward all view changes
+ *       around addition and removal of views to the DialogRootViewGroup.
+ * </ol>
  */
 public class ReactModalHostView extends ViewGroup implements LifecycleEventListener {
 
@@ -283,6 +292,11 @@ public class ReactModalHostView extends ViewGroup implements LifecycleEventListe
     }
   }
 
+  @UiThread
+  public void updateState(StateWrapper stateWrapper, int width, int height) {
+    mHostView.updateState(stateWrapper, width, height);
+  }
+
   /**
    * Returns the view that will be the root view of the dialog. We are wrapping this in a
    * FrameLayout because this is the system's way of notifying us that the dialog size has changed.
@@ -342,6 +356,8 @@ public class ReactModalHostView extends ViewGroup implements LifecycleEventListe
     private int viewWidth;
     private int viewHeight;
 
+    private @Nullable StateWrapper mStateWrapper;
+
     private final JSTouchDispatcher mJSTouchDispatcher = new JSTouchDispatcher(this);
 
     public DialogRootViewGroup(Context context) {
@@ -360,19 +376,34 @@ public class ReactModalHostView extends ViewGroup implements LifecycleEventListe
       if (getChildCount() > 0) {
         hasAdjustedSize = false;
         final int viewTag = getChildAt(0).getId();
-        ReactContext reactContext = getReactContext();
-        reactContext.runOnNativeModulesQueueThread(
-            new GuardedRunnable(reactContext) {
-              @Override
-              public void runGuarded() {
-                (getReactContext())
-                    .getNativeModule(UIManagerModule.class)
-                    .updateNodeSize(viewTag, viewWidth, viewHeight);
-              }
-            });
+        if (mStateWrapper != null) {
+          // This will only be called under Fabric
+          updateState(mStateWrapper, viewWidth, viewHeight);
+        } else {
+          // TODO: T44725185 remove after full migration to Fabric
+          ReactContext reactContext = getReactContext();
+          reactContext.runOnNativeModulesQueueThread(
+              new GuardedRunnable(reactContext) {
+                @Override
+                public void runGuarded() {
+                  (getReactContext())
+                      .getNativeModule(UIManagerModule.class)
+                      .updateNodeSize(viewTag, viewWidth, viewHeight);
+                }
+              });
+        }
       } else {
         hasAdjustedSize = true;
       }
+    }
+
+    @UiThread
+    public void updateState(StateWrapper stateWrapper, int width, int height) {
+      mStateWrapper = stateWrapper;
+      WritableMap map = new WritableNativeMap();
+      map.putDouble("screenWidth", PixelUtil.toDIPFromPixel(width));
+      map.putDouble("screenHeight", PixelUtil.toDIPFromPixel(height));
+      stateWrapper.updateState(map);
     }
 
     @Override

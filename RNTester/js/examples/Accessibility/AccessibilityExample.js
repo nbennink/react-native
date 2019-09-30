@@ -16,6 +16,7 @@ const {
   Text,
   View,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Alert,
   UIManager,
   findNodeHandle,
@@ -478,10 +479,122 @@ class AccessibilityActionsExample extends React.Component {
             <Text>Slider</Text>
           </View>
         </RNTesterBlock>
+
+        <RNTesterBlock title="Button with custom accessibility actions">
+          <TouchableWithoutFeedback
+            accessible={true}
+            accessibilityActions={[
+              {name: 'cut', label: 'cut label'},
+              {name: 'copy', label: 'copy label'},
+              {name: 'paste', label: 'paste label'},
+            ]}
+            onAccessibilityAction={event => {
+              switch (event.nativeEvent.actionName) {
+                case 'cut':
+                  Alert.alert('Alert', 'cut action success');
+                  break;
+                case 'copy':
+                  Alert.alert('Alert', 'copy action success');
+                  break;
+                case 'paste':
+                  Alert.alert('Alert', 'paste action success');
+                  break;
+              }
+            }}
+            onPress={() => Alert.alert('Button has been pressed!')}
+            accessibilityRole="button">
+            <View>
+              <Text>Click me</Text>
+            </View>
+          </TouchableWithoutFeedback>
+        </RNTesterBlock>
       </View>
     );
   }
 }
+
+class FakeSliderExample extends React.Component {
+  state = {
+    current: 50,
+    textualValue: 'center',
+  };
+
+  increment = () => {
+    let newValue = this.state.current + 2;
+    if (newValue > 100) {
+      newValue = 100;
+    }
+    this.setState({
+      current: newValue,
+    });
+  };
+
+  decrement = () => {
+    let newValue = this.state.current - 2;
+    if (newValue < 0) {
+      newValue = 0;
+    }
+    this.setState({
+      current: newValue,
+    });
+  };
+
+  render() {
+    return (
+      <View>
+        <View
+          accessible={true}
+          accessibilityLabel="Fake Slider"
+          accessibilityRole="adjustable"
+          accessibilityActions={[{name: 'increment'}, {name: 'decrement'}]}
+          onAccessibilityAction={event => {
+            switch (event.nativeEvent.actionName) {
+              case 'increment':
+                this.increment();
+                break;
+              case 'decrement':
+                this.decrement();
+                break;
+            }
+          }}
+          accessibilityValue={{
+            min: 0,
+            now: this.state.current,
+            max: 100,
+          }}>
+          <Text>Fake Slider</Text>
+        </View>
+        <View
+          accessible={true}
+          accessibilityLabel="Equalizer"
+          accessibilityRole="adjustable"
+          accessibilityActions={[{name: 'increment'}, {name: 'decrement'}]}
+          onAccessibilityAction={event => {
+            switch (event.nativeEvent.actionName) {
+              case 'increment':
+                if (this.state.textualValue === 'center') {
+                  this.setState({textualValue: 'right'});
+                } else if (this.state.textualValue === 'left') {
+                  this.setState({textualValue: 'center'});
+                }
+                break;
+              case 'decrement':
+                if (this.state.textualValue === 'center') {
+                  this.setState({textualValue: 'left'});
+                } else if (this.state.textualValue === 'right') {
+                  this.setState({textualValue: 'center'});
+                }
+                break;
+            }
+          }}
+          accessibilityValue={{text: this.state.textualValue}}>
+          <Text>Equalizer</Text>
+        </View>
+      </View>
+    );
+  }
+}
+
 class ScreenReaderStatusExample extends React.Component<{}> {
   state = {
     screenReaderEnabled: false,
@@ -559,6 +672,12 @@ exports.examples = [
     title: 'Accessibility action examples',
     render(): React.Element<typeof AccessibilityActionsExample> {
       return <AccessibilityActionsExample />;
+    },
+  },
+  {
+    title: 'Fake Slider Example',
+    render(): React.Element<typeof FakeSliderExample> {
+      return <FakeSliderExample />;
     },
   },
   {

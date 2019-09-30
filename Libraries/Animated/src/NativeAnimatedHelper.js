@@ -10,17 +10,16 @@
 'use strict';
 
 import NativeEventEmitter from '../../EventEmitter/NativeEventEmitter';
+import type {EventConfig} from './AnimatedEvent';
+import NativeAnimatedModule from './NativeAnimatedModule';
 import type {
   EventMapping,
   AnimatedNodeConfig,
   AnimatingNodeConfig,
 } from './NativeAnimatedModule';
-import NativeAnimatedModule from './NativeAnimatedModule';
-import invariant from 'invariant';
-
 import type {AnimationConfig, EndCallback} from './animations/Animation';
 import type {InterpolationConfigType} from './nodes/AnimatedInterpolation';
-import type {EventConfig} from './AnimatedEvent';
+import invariant from 'invariant';
 
 let __nativeAnimatedNodeTagCount = 1; /* used for animated nodes */
 let __nativeAnimationIdCount = 1; /* used for started animations */
@@ -31,7 +30,7 @@ let queueConnections = false;
 let queue = [];
 
 /**
- * Simple wrappers around NativeAnimatedModule to provide flow and autocmplete support for
+ * Simple wrappers around NativeAnimatedModule to provide flow and autocomplete support for
  * the native module methods
  */
 const API = {
@@ -190,6 +189,7 @@ const TRANSFORM_WHITELIST = {
   rotate: true,
   rotateX: true,
   rotateY: true,
+  rotateZ: true,
   perspective: true,
 };
 
@@ -265,6 +265,13 @@ function assertNativeAnimatedModule(): void {
 let _warnedMissingNativeAnimated = false;
 
 function shouldUseNativeDriver(config: AnimationConfig | EventConfig): boolean {
+  if (config.useNativeDriver == null) {
+    console.warn(
+      'Animated: `useNativeDriver` was not specified. This is a required ' +
+        'option and must be explicitly set to `true` or `false`',
+    );
+  }
+
   if (config.useNativeDriver === true && !NativeAnimatedModule) {
     if (!_warnedMissingNativeAnimated) {
       console.warn(
@@ -311,7 +318,7 @@ module.exports = {
   shouldUseNativeDriver,
   transformDataType,
   // $FlowExpectedError - unsafe getter lint suppresion
-  get nativeEventEmitter() {
+  get nativeEventEmitter(): NativeEventEmitter {
     if (!nativeEventEmitter) {
       nativeEventEmitter = new NativeEventEmitter(NativeAnimatedModule);
     }

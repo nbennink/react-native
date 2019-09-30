@@ -6,6 +6,7 @@
  */
 package com.facebook.react.uimanager;
 
+import androidx.annotation.Nullable;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.uimanager.annotations.ReactPropertyHolder;
 import com.facebook.yoga.YogaAlign;
@@ -19,13 +20,13 @@ import com.facebook.yoga.YogaFlexDirection;
 import com.facebook.yoga.YogaJustify;
 import com.facebook.yoga.YogaMeasureFunction;
 import com.facebook.yoga.YogaNode;
+import com.facebook.yoga.YogaNodeFactory;
 import com.facebook.yoga.YogaOverflow;
 import com.facebook.yoga.YogaPositionType;
 import com.facebook.yoga.YogaValue;
 import com.facebook.yoga.YogaWrap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import javax.annotation.Nullable;
 
 /**
  * Base node class for representing virtual tree of React nodes. Shadow nodes are used primarily for
@@ -89,7 +90,7 @@ public class ReactShadowNodeImpl implements ReactShadowNode<ReactShadowNodeImpl>
     mDefaultPadding = new Spacing(0);
     if (!isVirtual()) {
       YogaNode node = YogaNodePool.get().acquire();
-      mYogaNode = node == null ? YogaNode.create(sYogaConfig) : node;
+      mYogaNode = node == null ? YogaNodeFactory.create(sYogaConfig) : node;
       mYogaNode.setData(this);
       Arrays.fill(mPadding, YogaConstants.UNDEFINED);
     } else {

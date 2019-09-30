@@ -7,6 +7,8 @@
 package com.facebook.react.uimanager;
 
 import android.content.res.Resources;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
@@ -16,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.PopupMenu;
+import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.R;
 import com.facebook.react.bridge.Callback;
@@ -32,16 +35,20 @@ import com.facebook.react.uimanager.layoutanimation.LayoutAnimationListener;
 import com.facebook.systrace.Systrace;
 import com.facebook.systrace.SystraceMessage;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Delegate of {@link UIManagerModule} that owns the native view hierarchy and mapping between
  * native view names used in JS and corresponding instances of {@link ViewManager}. The {@link
- * UIManagerModule} communicates with this class by it's public interface methods: - {@link
- * #updateProperties} - {@link #updateLayout} - {@link #createView} - {@link #manageChildren}
+ * UIManagerModule} communicates with this class by it's public interface methods:
+ *
+ * <ul>
+ *   <li>{@link #updateProperties}
+ *   <li>{@link #updateLayout}
+ *   <li>{@link #createView}
+ *   <li>{@link #manageChildren}
+ * </ul>
+ *
  * executing all the scheduled UI operations at the end of JS batch.
  *
  * <p>NB: All native view management methods listed above must be called from the UI thread.
@@ -67,8 +74,9 @@ public class NativeViewHierarchyManager {
   private final JSResponderHandler mJSResponderHandler = new JSResponderHandler();
   private final RootViewManager mRootViewManager;
   private final LayoutAnimationController mLayoutAnimator = new LayoutAnimationController();
-  private final Map<Integer, SparseIntArray> mTagsToPendingIndicesToDelete = new HashMap<>();
+  private final SparseArray<SparseIntArray> mTagsToPendingIndicesToDelete = new SparseArray<>();
   private final int[] mDroppedViewArray = new int[100];
+  private final RectF mBoundingBox = new RectF();
 
   private boolean mLayoutAnimationEnabled;
   private PopupMenu mPopupMenu;
@@ -644,16 +652,47 @@ public class NativeViewHierarchyManager {
     if (rootView == null) {
       throw new NoSuchNativeViewException("Native view " + tag + " is no longer on screen");
     }
-    rootView.getLocationInWindow(outputBuffer);
+    computeBoundingBox(rootView, outputBuffer);
     int rootX = outputBuffer[0];
     int rootY = outputBuffer[1];
+    computeBoundingBox(v, outputBuffer);
+    outputBuffer[0] -= rootX;
+    outputBuffer[1] -= rootY;
+  }
 
-    v.getLocationInWindow(outputBuffer);
+  private void computeBoundingBox(View view, int[] outputBuffer) {
+    mBoundingBox.set(0, 0, view.getWidth(), view.getHeight());
+    mapRectFromViewToWindowCoords(view, mBoundingBox);
 
-    outputBuffer[0] = outputBuffer[0] - rootX;
-    outputBuffer[1] = outputBuffer[1] - rootY;
-    outputBuffer[2] = v.getWidth();
-    outputBuffer[3] = v.getHeight();
+    outputBuffer[0] = Math.round(mBoundingBox.left);
+    outputBuffer[1] = Math.round(mBoundingBox.top);
+    outputBuffer[2] = Math.round(mBoundingBox.right - mBoundingBox.left);
+    outputBuffer[3] = Math.round(mBoundingBox.bottom - mBoundingBox.top);
+  }
+
+  private void mapRectFromViewToWindowCoords(View view, RectF rect) {
+    Matrix matrix = view.getMatrix();
+    if (!matrix.isIdentity()) {
+      matrix.mapRect(rect);
+    }
+
+    rect.offset(view.getLeft(), view.getTop());
+
+    ViewParent parent = view.getParent();
+    while (parent instanceof View) {
+      View parentView = (View) parent;
+
+      rect.offset(-parentView.getScrollX(), -parentView.getScrollY());
+
+      matrix = parentView.getMatrix();
+      if (!matrix.isIdentity()) {
+        matrix.mapRect(rect);
+      }
+
+      rect.offset(parentView.getLeft(), parentView.getTop());
+
+      parent = parentView.getParent();
+    }
   }
 
   /**
@@ -730,6 +769,7 @@ public class NativeViewHierarchyManager {
     mLayoutAnimator.reset();
   }
 
+  @Deprecated
   public synchronized void dispatchCommand(
       int reactTag, int commandId, @Nullable ReadableArray args) {
     UiThreadUtil.assertOnUiThread();

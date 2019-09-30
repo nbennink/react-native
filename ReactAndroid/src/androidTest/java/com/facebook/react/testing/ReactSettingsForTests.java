@@ -47,4 +47,12 @@ public class ReactSettingsForTests implements DeveloperSettings {
 
   @Override
   public void setRemoteJSDebugEnabled(boolean remoteJSDebugEnabled) {}
+
+  @Override
+  public boolean isStartSamplingProfilerOnInit() {
+    return false;
+  }
+
+  @Override
+  public void addMenuItem(String title) {}
 }

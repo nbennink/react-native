@@ -11,6 +11,7 @@
 'use strict';
 
 const React = require('react');
+
 const {
   Animated,
   Image,
@@ -23,7 +24,7 @@ const {
 class AnExScroll extends React.Component<$FlowFixMeProps, any> {
   state: any = {scrollX: new Animated.Value(0)};
 
-  render() {
+  render(): React.Node {
     const width = this.props.panelWidth;
     return (
       <View style={styles.container}>
@@ -32,6 +33,7 @@ class AnExScroll extends React.Component<$FlowFixMeProps, any> {
           scrollEventThrottle={16 /* get all events */}
           onScroll={Animated.event(
             [{nativeEvent: {contentOffset: {x: this.state.scrollX}}}], // nested event mapping
+            {useNativeDriver: false},
           )}
           contentContainerStyle={{flex: 1, padding: 10}}
           pagingEnabled={true}

@@ -34,11 +34,14 @@ import static com.facebook.systrace.Systrace.TRACE_TAG_REACT_JS_VM_CALLS;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.net.Uri;
+import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Process;
 import android.util.Log;
 import android.view.View;
+import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import com.facebook.common.logging.FLog;
 import com.facebook.debug.holder.PrinterHolder;
@@ -55,7 +58,6 @@ import com.facebook.react.bridge.JSIModuleType;
 import com.facebook.react.bridge.JavaJSExecutor;
 import com.facebook.react.bridge.JavaScriptExecutor;
 import com.facebook.react.bridge.JavaScriptExecutorFactory;
-import com.facebook.react.bridge.NativeDeltaClient;
 import com.facebook.react.bridge.NativeModuleCallExceptionHandler;
 import com.facebook.react.bridge.NativeModuleRegistry;
 import com.facebook.react.bridge.NotThreadSafeBridgeIdleDebugListener;
@@ -78,6 +80,7 @@ import com.facebook.react.devsupport.RedBoxHandler;
 import com.facebook.react.devsupport.interfaces.DevBundleDownloadListener;
 import com.facebook.react.devsupport.interfaces.DevSupportManager;
 import com.facebook.react.devsupport.interfaces.PackagerStatusCallback;
+import com.facebook.react.modules.appearance.AppearanceModule;
 import com.facebook.react.modules.appregistry.AppRegistry;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
@@ -102,7 +105,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.Nullable;
 
 /**
  * This class is managing instances of {@link CatalystInstance}. It exposes a way to configure
@@ -279,8 +281,8 @@ public class ReactInstanceManager {
       }
 
       @Override
-      public void onJSBundleLoadedFromServer(@Nullable NativeDeltaClient nativeDeltaClient) {
-        ReactInstanceManager.this.onJSBundleLoadedFromServer(nativeDeltaClient);
+      public void onJSBundleLoadedFromServer() {
+        ReactInstanceManager.this.onJSBundleLoadedFromServer();
       }
 
       @Override
@@ -292,7 +294,16 @@ public class ReactInstanceManager {
       public @Nullable Activity getCurrentActivity() {
         return ReactInstanceManager.this.mCurrentActivity;
       }
+
+      @Override
+      public JavaScriptExecutorFactory getJavaScriptExecutorFactory() {
+        return ReactInstanceManager.this.getJSExecutorFactory();
+      }
     };
+  }
+
+  private JavaScriptExecutorFactory getJSExecutorFactory() {
+    return mJavaScriptExecutorFactory;
   }
 
   public DevSupportManager getDevSupportManager() {
@@ -307,7 +318,7 @@ public class ReactInstanceManager {
     return new ArrayList<>(mPackages);
   }
 
-  private static void initializeSoLoaderIfNecessary(Context applicationContext) {
+  static void initializeSoLoaderIfNecessary(Context applicationContext) {
     // Call SoLoader.initialize here, this is required for apps that does not use exopackage and
     // does not use SoLoader for loading other native code except from the one used by React Native
     // This way we don't need to require others to have additional initialization code and to
@@ -328,6 +339,8 @@ public class ReactInstanceManager {
   @ThreadConfined(UI)
   public void createReactContextInBackground() {
     Log.d(ReactConstants.TAG, "ReactInstanceManager.createReactContextInBackground()");
+    UiThreadUtil
+        .assertOnUiThread(); // Assert before setting mHasStartedCreatingInitialContext = true
     if (!mHasStartedCreatingInitialContext) {
       mHasStartedCreatingInitialContext = true;
       recreateReactContextInBackgroundInner();
@@ -360,15 +373,6 @@ public class ReactInstanceManager {
     if (mUseDeveloperSupport && mJSMainModulePath != null) {
       final DeveloperSettings devSettings = mDevSupportManager.getDevSettings();
 
-      // If remote JS debugging is enabled, load from dev server.
-      if (mDevSupportManager.hasUpToDateJSBundleInCache()
-          && !devSettings.isRemoteJSDebugEnabled()) {
-        // If there is a up-to-date bundle downloaded from server,
-        // with remote JS debugging disabled, always use that.
-        onJSBundleLoadedFromServer(null);
-        return;
-      }
-
       if (!Systrace.isTracing(TRACE_TAG_REACT_APPS | TRACE_TAG_REACT_JS_VM_CALLS)) {
         if (mBundleLoader == null) {
           mDevSupportManager.handleReloadJS();
@@ -383,6 +387,11 @@ public class ReactInstanceManager {
                         public void run() {
                           if (packagerIsRunning) {
                             mDevSupportManager.handleReloadJS();
+                          } else if (mDevSupportManager.hasUpToDateJSBundleInCache()
+                              && !devSettings.isRemoteJSDebugEnabled()) {
+                            // If there is a up-to-date bundle downloaded from server,
+                            // with remote JS debugging disabled, always use that.
+                            onJSBundleLoadedFromServer();
                           } else {
                             // If dev server is down, disable the remote JS debugging.
                             devSettings.setRemoteJSDebugEnabled(false);
@@ -454,7 +463,9 @@ public class ReactInstanceManager {
       String action = intent.getAction();
       Uri uri = intent.getData();
 
-      if (Intent.ACTION_VIEW.equals(action) && uri != null) {
+      if (uri != null
+          && (Intent.ACTION_VIEW.equals(action)
+              || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))) {
         DeviceEventManagerModule deviceEventManagerModule =
             currentContext.getNativeModule(DeviceEventManagerModule.class);
         deviceEventManagerModule.emitNewIntentReceived(uri);
@@ -706,6 +717,17 @@ public class ReactInstanceManager {
     }
   }
 
+  /** Call this from {@link Activity#onConfigurationChanged()}. */
+  @ThreadConfined(UI)
+  public void onConfigurationChanged(@Nullable Configuration newConfig) {
+    UiThreadUtil.assertOnUiThread();
+
+    ReactContext currentContext = getCurrentReactContext();
+    if (currentContext != null) {
+      currentContext.getNativeModule(AppearanceModule.class).onConfigurationChanged();
+    }
+  }
+
   @ThreadConfined(UI)
   public void showDevOptionsDialog() {
     UiThreadUtil.assertOnUiThread();
@@ -876,15 +898,12 @@ public class ReactInstanceManager {
   }
 
   @ThreadConfined(UI)
-  private void onJSBundleLoadedFromServer(@Nullable NativeDeltaClient nativeDeltaClient) {
+  private void onJSBundleLoadedFromServer() {
     Log.d(ReactConstants.TAG, "ReactInstanceManager.onJSBundleLoadedFromServer()");
 
     JSBundleLoader bundleLoader =
-        nativeDeltaClient == null
-            ? JSBundleLoader.createCachedBundleFromNetworkLoader(
-                mDevSupportManager.getSourceUrl(), mDevSupportManager.getDownloadedJSBundleFile())
-            : JSBundleLoader.createDeltaFromNetworkLoader(
-                mDevSupportManager.getSourceUrl(), nativeDeltaClient);
+        JSBundleLoader.createCachedBundleFromNetworkLoader(
+            mDevSupportManager.getSourceUrl(), mDevSupportManager.getDownloadedJSBundleFile());
 
     recreateReactContextInBackground(mJavaScriptExecutorFactory, bundleLoader);
   }
